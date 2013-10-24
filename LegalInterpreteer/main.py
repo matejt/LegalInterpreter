@@ -1,13 +1,22 @@
 __author__ = 'mtacer'
 
-# import arcpy
+import arcpy
+import datetime
 
+class Field():
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
 
-class LegalDescription(object):
-    def __init__(self, location_id, quarter_section, section_number, abstract_number, survey_name, township,
-                 township_direction, range_, range_direction, footage1, footage1_direction,
-                 footage2, footage2_direction, footage_corner, county_id, state_code, country):
-        pass
+class LocationRecord(object):
+
+    # represents one row in a table
+    def __init__(self, field_list, value_list):
+        self.fields = []
+        for i, field_def in enumerate(field_list):
+            field = Field(field_def.name, value_list[i])
+            self.fields.append(field)
+            # setattr(self,field.name, value_list[i])
 
     def type(self):
         pass
@@ -17,11 +26,25 @@ class LegalDescription(object):
 
 
 class LocationTable(object):
-    def __init__(self, connection):
-        pass
+    def __init__(self, sde_conn, where_clause=''):
+        self.sde_conn = sde_conn
+        self.where_clause = where_clause
+        self.field_list = arcpy.ListFields(self.sde_conn)
+
+    def records(self):
+        records = []
+        with arcpy.da.SearchCursor(self.sde_conn, "*", self.where_clause) as cursor:
+            print 'returns only first 10.000 records [testing]'
+            for i,row in enumerate(cursor):
+                if i > 10000: break
+                records.append(LocationRecord(self.field_list, row))
+        return records
 
 
 class GridFeatureClass(object):
+    __gis_workspace__ = 'SANDBOX'
+    __table__ = 'GGADMIN.TC_LINEAR_DATA'
+
     def __init__(self):
         pass
 
@@ -61,3 +84,16 @@ class Carter_Tennessee_Grid(GridFeatureClass):
 
 if __name__ == '__main__':
     pass
+
+
+if __name__ == '__main__':
+    print datetime.datetime.now(), 'reading data...'
+    table = r'D:\ConnFiles\RDSQLDEV_Reporting.sde\Reporting.dbo.vw_LocationData'
+    loc_table = LocationTable(table)
+    records = loc_table.records()
+    print datetime.datetime.now()
+    for i, record in enumerate(records,1):
+        if i > 5: break
+        print i
+        for j, field in enumerate(record.fields,1):
+            print '\t%3i. %s | %s' % (j, field.name.ljust(30), str(field.value).strip().rjust(30))
